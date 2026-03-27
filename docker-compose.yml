@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # --- Frontend (Next.js) ---
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: syncra-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      # Sync source code for hot-reloading
+      - ./frontend:/app
+      # Keep node_modules inside container separate from host
+      - /app/node_modules
+      - /app/.next
+    environment:
+      # Backend API URL (Corrected to include /api/v1 prefix)
+      - NEXT_PUBLIC_API_URL=https://api.syncra.website/api/v1
+      # Enable polling for hot-reload on Windows filesystem
+      - WATCHPACK_POLLING=true
+    depends_on:
+      - backend
+    restart: always
+
+  # --- Backend (FastAPI) ---
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: syncra-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Sync source code for hot-reloading
+      - ./backend:/app
+    environment:
+      # Database connection (using service name 'db' as host)
+      - DATABASE_URL=postgresql://postgres:admin@db:5432/Syncra
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+      # DEV_MODE=true for hot-reload | DEV_MODE=false for Gunicorn (worker mode)
+      - DEV_MODE=true
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  # --- Database (PostgreSQL) ---
+  db:
+    image: postgres:15-alpine
+    container_name: syncra-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=Syncra
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # --- Cache (Redis) ---
+  redis:
+    image: redis:alpine
+    container_name: syncra-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,16 @@
+# Ignore local dependencies and environment files
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-lock.yaml
+.next
+.git
+.gitignore
+venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+coverage/
+build/
+dist/
